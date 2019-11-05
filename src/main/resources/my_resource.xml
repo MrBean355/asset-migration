@@ -1,0 +1,16 @@
+/** A method of receiving asset mappings. */
+        interface AssetMapping {
+        fun getAllMappings(): Map
+<String, String>
+        }
+
+        class TestAssetMapping : AssetMapping {
+
+        override fun getAllMappings(): Map<String, String> {
+        return mapOf(
+        "app_icon"
+        "icn_alert"
+        "icn_payment"
+        )
+        }
+        }
