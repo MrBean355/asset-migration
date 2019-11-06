@@ -2,14 +2,6 @@ package com.android.assets
 
 import java.io.File
 
-/**
- * Pattern for valid replacements.
- *
- * Don't replace usages when that usage contains the desired asset name as a substring. For example, when replacing
- * `icn_person`, we don't want to also replace `icn_person_2` or `blue_icn_person` (because they are different assets).
- */
-private const val ASSET_PATTERN = "([^a-z0-9_])%s([^a-z0-9_])"
-
 object AssetMigrator {
 
     /**
@@ -21,13 +13,15 @@ object AssetMigrator {
      * @param mapping mapping of old names to new names.
      */
     fun run(dryRun: Boolean, output: Output, directories: Collection<String>, mapping: AssetMapping) {
+        val nameMappings = mapping.getAllMappings()
+        output += "Using mappings: $nameMappings"
         directories.forEach { dir ->
             output += "\nProcessing directory: $dir..."
             val dirFile = File(dir)
             if (!dirFile.exists() || !dirFile.isDirectory) {
                 output += "Error: target doesn't exist or is not a directory."
             } else {
-                makeChanges(dryRun, output, dirFile, mapping.getAllMappings())
+                makeChanges(dryRun, output, dirFile, nameMappings)
             }
         }
     }
@@ -39,17 +33,17 @@ object AssetMigrator {
             }
         } else {
             var fileContent = file.readText()
-            val matches = mapping.filterKeys {
-                fileContent.contains(Regex(ASSET_PATTERN.format(it)))
+            val applicableReplacements = mapping.filterKeys {
+                fileContent.containsAssetName(it)
             }
-            if (matches.isEmpty()) {
+            if (applicableReplacements.isEmpty()) {
                 // No replacements to be made.
                 return
             }
             output += "\tProcessing file: ${file.path}..."
-            matches.forEach { (old, new) ->
+            applicableReplacements.forEach { (old, new) ->
                 output += "\t\tReplacing: $old -> $new"
-                fileContent = fileContent.replace(Regex(ASSET_PATTERN.format(old)), "$1$new$2")
+                fileContent = fileContent.replaceAssetName(old, new)
             }
             if (!dryRun) {
                 file.writeText(fileContent)

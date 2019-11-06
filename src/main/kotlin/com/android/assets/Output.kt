@@ -28,6 +28,6 @@ class FileOutput(fileName: String) : Output {
     }
 
     override operator fun plusAssign(text: String) {
-        file.appendText(text)
+        file.appendText("$text\n")
     }
 }
