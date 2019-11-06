@@ -4,9 +4,11 @@ import java.io.File
 
 /** A method of outputting logs. */
 interface Output {
+    /** Append some text to the output. */
     operator fun plusAssign(text: String)
 }
 
+/** Write output to the console. */
 class ConsoleOutput : Output {
 
     override operator fun plusAssign(text: String) {
@@ -14,6 +16,7 @@ class ConsoleOutput : Output {
     }
 }
 
+/** Write output to a file with the name. Overwrites the file if it already exists. */
 class FileOutput(fileName: String) : Output {
     private val file = File(fileName)
 
