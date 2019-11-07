@@ -7,17 +7,6 @@ interface AssetMapping {
     fun getAllMappings(): Map<String, String>
 }
 
-class TestAssetMapping : AssetMapping {
-
-    override fun getAllMappings(): Map<String, String> {
-        return mapOf(
-                "app_icon" to "app_logo_primary",
-                "icn_alert" to "icn_alert_grey",
-                "icn_payment" to "icn_payment_white"
-        )
-    }
-}
-
 private const val CSV_COLUMN_SEPARATOR = ','
 
 class CsvFileAssetMapping(fileName: String) : AssetMapping {
@@ -33,10 +22,21 @@ class CsvFileAssetMapping(fileName: String) : AssetMapping {
             if (cols.size > 1) {
                 val newName = cols[1]
                 require(newName.isValidAssetName()) { "Invalid asset name: $newName" }
-                mappings += oldName.substringBeforeLast('.') to newName.substringBeforeLast('.')
+                val key = oldName.substringBeforeLast('.')
+                require(!mappings.containsKey(key)) { "$key has multiple replacements" }
+                mappings += key to newName.substringBeforeLast('.')
             } else {
                 println("Warning: no replacement for $oldName.")
             }
+        }
+
+        mappings.keys.filter { it == mappings[it] }.forEach {
+            println("Warning: tried to replace $it with itself! Ignoring this asset.")
+            mappings.remove(it)
+        }
+
+        mappings.keys.filter { it in mappings.values }.forEach {
+            println("Warning: $it is an old & new asset! This makes it risky to run the program multiple times on the same directory.")
         }
     }
 
