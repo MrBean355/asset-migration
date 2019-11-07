@@ -18,15 +18,19 @@ class CsvFileAssetMapping(fileName: String) : AssetMapping {
         file.readLines().drop(1).forEach { line ->
             val cols = line.split(CSV_COLUMN_SEPARATOR)
             val oldName = cols.first()
-            require(oldName.isValidAssetName()) { "Invalid asset name: $oldName" }
+            require(oldName.isNotBlank() && oldName.isValidAssetName()) { "Invalid asset name: $oldName" }
             if (cols.size > 1) {
                 val newName = cols[1]
-                require(newName.isValidAssetName()) { "Invalid asset name: $newName" }
-                val key = oldName.substringBeforeLast('.')
-                require(!mappings.containsKey(key)) { "$key has multiple replacements" }
-                mappings += key to newName.substringBeforeLast('.')
+                if (newName.isBlank()) {
+                    println("Warning: $oldName has no replacement, ignoring.")
+                } else {
+                    require(newName.isValidAssetName()) { "Invalid asset name: $newName" }
+                    val key = oldName.substringBeforeLast('.')
+                    require(!mappings.containsKey(key)) { "$key has multiple replacements" }
+                    mappings += key to newName.substringBeforeLast('.')
+                }
             } else {
-                println("Warning: no replacement for $oldName.")
+                println("Warning: $oldName has no replacement, ignoring.")
             }
         }
 
