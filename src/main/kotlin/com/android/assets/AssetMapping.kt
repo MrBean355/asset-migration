@@ -18,7 +18,7 @@ class TestAssetMapping : AssetMapping {
     }
 }
 
-private const val CSV_COLUMN_SEPARATOR = ';'
+private const val CSV_COLUMN_SEPARATOR = ','
 
 class CsvFileAssetMapping(fileName: String) : AssetMapping {
     private val mappings = mutableMapOf<String, String>()
@@ -28,13 +28,12 @@ class CsvFileAssetMapping(fileName: String) : AssetMapping {
         require(file.exists() && file.isFile) { "Not an existing file: ${file.absolutePath}" }
         file.readLines().drop(1).forEach { line ->
             val cols = line.split(CSV_COLUMN_SEPARATOR)
-            require(cols.size <= 2) { "Invalid CSV format: $line" }
             val oldName = cols.first()
             require(oldName.isValidAssetName()) { "Invalid asset name: $oldName" }
-            if (cols.size == 2) {
+            if (cols.size > 1) {
                 val newName = cols[1]
                 require(newName.isValidAssetName()) { "Invalid asset name: $newName" }
-                mappings += oldName to newName
+                mappings += oldName.substringBeforeLast('.') to newName.substringBeforeLast('.')
             } else {
                 println("Warning: no replacement for $oldName.")
             }

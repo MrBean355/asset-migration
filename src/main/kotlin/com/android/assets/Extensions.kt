@@ -3,7 +3,7 @@ package com.android.assets
 /** Characters that terminate an asset name. */
 private const val ASSET_NAME_TERMINATING_PATTERN = "[^a-z0-9_]"
 /** Regex for a valid asset name. */
-private val ASSET_NAME_REGEX = Regex("[a-z0-9_]*")
+private val ASSET_NAME_REGEX = Regex("[a-z0-9_]*(\\.png)?")
 /**
  * Pattern for valid replacements.
  *
