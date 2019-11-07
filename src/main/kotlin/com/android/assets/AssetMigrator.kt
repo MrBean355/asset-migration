@@ -3,19 +3,20 @@ package com.android.assets
 import java.io.File
 import java.io.FileFilter
 
-object AssetMigrator {
+class AssetMigrator(
+        private val dryRun: Boolean,
+        private val output: Output,
+        mapping: AssetMapping) {
+
+    private val nameMappings = mapping.getAllMappings()
+    private val invalidAssets = mapping.getInvalidAssets()
 
     /**
      * Replace usages of old assets with new ones.
-     *
-     * @param dryRun if `true`, don't actually make changes.
-     * @param output output mechanism for logging.
-     * @param directories directories to run on.
-     * @param mapping mapping of old names to new names.
      */
-    fun run(dryRun: Boolean, output: Output, directories: Collection<String>, mapping: AssetMapping) {
-        val nameMappings = mapping.getAllMappings()
+    fun run(directories: Collection<String>) {
         output += "Using mappings: $nameMappings"
+        output += "Invalid assets: $invalidAssets"
         directories.forEach { dir ->
             output += "\nProcessing directory: $dir..."
             val dirFile = File(dir)
@@ -28,18 +29,18 @@ object AssetMigrator {
                 output += "Error: please run on the root directory of a module."
                 return
             }
-            makeChanges(dryRun, output, srcDirectories.single(), nameMappings)
+            makeChanges(srcDirectories.single())
         }
     }
 
-    private fun makeChanges(dryRun: Boolean, output: Output, file: File, mapping: Map<String, String>) {
+    private fun makeChanges(file: File) {
         if (file.isDirectory) {
             file.listFiles()?.forEach {
-                makeChanges(dryRun, output, it, mapping)
+                makeChanges(it)
             }
         } else {
             var fileContent = file.readText()
-            val applicableReplacements = mapping.filterKeys {
+            val applicableReplacements = nameMappings.filterKeys {
                 fileContent.containsAssetName(it)
             }
             if (applicableReplacements.isEmpty()) {
@@ -47,6 +48,10 @@ object AssetMigrator {
                 return
             }
             output += "\tProcessing file: ${file.name}..."
+            val invalidAssetUsages = invalidAssets.filter { fileContent.containsAssetName(it) }
+            if (invalidAssetUsages.isNotEmpty()) {
+                output += "\t\tInvalid assets used: $invalidAssetUsages"
+            }
             applicableReplacements.forEach { (old, new) ->
                 output += "\t\tReplacing: $old -> $new"
                 fileContent = fileContent.replaceAssetName(old, new)

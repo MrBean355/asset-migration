@@ -50,12 +50,11 @@ fun main(args: Array<String>) {
         return
     }
 
-    AssetMigrator.run(
+    AssetMigrator(
             dryRun = dryRun,
             output = if (outputFile.isNotBlank()) FileOutput(outputFile) else ConsoleOutput(),
-            directories = directories,
             mapping = assetMapping
-    )
+    ).run(directories)
 }
 
 private fun printUsage() {
