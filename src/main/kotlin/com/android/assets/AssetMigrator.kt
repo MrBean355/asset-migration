@@ -1,6 +1,7 @@
 package com.android.assets
 
 import java.io.File
+import java.io.FileFilter
 
 object AssetMigrator {
 
@@ -20,9 +21,14 @@ object AssetMigrator {
             val dirFile = File(dir)
             if (!dirFile.exists() || !dirFile.isDirectory) {
                 output += "Error: target doesn't exist or is not a directory."
-            } else {
-                makeChanges(dryRun, output, dirFile, nameMappings)
+                return
             }
+            val srcDirectories = dirFile.listFiles(FileFilter { it.name == "src" }).orEmpty()
+            if (srcDirectories.isEmpty()) {
+                output += "Error: please run on the root directory of a module."
+                return
+            }
+            makeChanges(dryRun, output, srcDirectories.single(), nameMappings)
         }
     }
 
@@ -40,7 +46,7 @@ object AssetMigrator {
                 // No replacements to be made.
                 return
             }
-            output += "\tProcessing file: ${file.path}..."
+            output += "\tProcessing file: ${file.name}..."
             applicableReplacements.forEach { (old, new) ->
                 output += "\t\tReplacing: $old -> $new"
                 fileContent = fileContent.replaceAssetName(old, new)
