@@ -42,19 +42,17 @@ fun main(args: Array<String>) {
     """.trimIndent())
 
     // Construct here to warn about assets without replacements before starting.
+    println("Parsing input mapping file...")
     val assetMapping = CsvFileAssetMapping(mapping)
+    println("Done parsing. Loaded ${assetMapping.mappings.size} mappings & ${assetMapping.deprecatedAssets.size} \"deprecated\" assets.")
 
-    print("Type 'go' to continue: ")
+    print("\nType 'go' to continue: ")
     if (readLine() != "go") {
         println("Bye")
         return
     }
 
-    AssetMigrator(
-            dryRun = dryRun,
-            output = if (outputFile.isNotBlank()) FileOutput(outputFile) else ConsoleOutput(),
-            mapping = assetMapping
-    ).run(directories)
+    AssetMigrator(dryRun, assetMapping).run(directories)
 }
 
 private fun printUsage() {
