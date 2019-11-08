@@ -1,49 +1,58 @@
 package com.android.assets
 
 import kotlinx.coroutines.Dispatchers.IO
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
 import java.io.FileFilter
+import java.util.Date
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
-import kotlin.system.measureTimeMillis
 
 class AssetMigrator(private val dryRun: Boolean, private val mapping: AssetMapping) {
     private val count = AtomicInteger(0)
 
     /**
      * Replace usages of old assets with new ones.
+     *
+     * @return total number of files processed.
      */
-    fun run(directories: Collection<String>) {
-        directories.forEach(this::runSingle)
+    fun run(directories: Collection<String>): Int {
+        val result = AtomicInteger()
+        runBlocking(context = IO) {
+            directories.forEach {
+                launch { result.addAndGet(runSingle(it)) }
+            }
+        }
+        return result.get()
     }
 
-    private fun runSingle(directory: String) {
+    private suspend fun runSingle(directory: String): Int {
         println("Processing directory: $directory...")
         val dirFile = File(directory)
         val logFile = getLogFile(dirFile.name)
-        logFile.appendLine("Processing ${dirFile.absolutePath}...")
+        logFile.appendLine("${Date()}\nProcessing ${dirFile.absolutePath}...")
         if (!dirFile.exists() || !dirFile.isDirectory) {
             logFile.appendLine("Error: target doesn't exist or is not a directory.")
-            return
+            return 0
         }
         val srcDirectories = dirFile.listFiles(FileFilter { it.name == "src" }).orEmpty()
         if (srcDirectories.isEmpty()) {
             logFile.appendLine("Error: please run on the root directory of a module (i.e. one that contains the 'src' directory).")
-            return
+            return 0
         }
         val allFiles = srcDirectories.single().getAllFiles()
+        logFile.appendLine("${allFiles.size} total files to process.")
         val logs = ConcurrentLinkedQueue<String>()
-        val duration = measureTimeMillis {
-            runBlocking(IO) {
-                allFiles.forEach {
-                    launch { logs += makeChanges(it) }
-                }
+        coroutineScope {
+            allFiles.forEach {
+                launch { logs += makeChanges(it) }
             }
         }
         logFile.appendLine(logs.joinToString(separator = "\n"))
-        logFile.appendLine("\nDone! Took $duration ms.")
+        logFile.appendLine("\nDone!")
+        return allFiles.size
     }
 
     private fun getLogFile(directory: String): File {

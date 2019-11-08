@@ -1,5 +1,7 @@
 package com.android.assets
 
+import kotlin.system.measureTimeMillis
+
 fun main(args: Array<String>) {
     val argList = args.toMutableList()
     var dryRun = false
@@ -52,7 +54,11 @@ fun main(args: Array<String>) {
         return
     }
 
-    AssetMigrator(dryRun, assetMapping).run(directories)
+    var totalFiles = 0
+    val duration = measureTimeMillis {
+        totalFiles = AssetMigrator(dryRun, assetMapping).run(directories)
+    }
+    println("Done! Processed a total of $totalFiles files in $duration ms.")
 }
 
 private fun printUsage() {
