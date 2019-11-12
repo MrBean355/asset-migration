@@ -36,12 +36,16 @@ class AssetMigrator(private val dryRun: Boolean, private val deleteMode: Boolean
             logs += "Error: target doesn't exist or is not a directory."
             return 0
         }
-        val srcDirectories = dirFile.listFiles(FileFilter { it.name == "src" }).orEmpty()
-        if (srcDirectories.isEmpty()) {
-            logs += "Error: please run on the root directory of a module (i.e. one that contains the 'src' directory)."
-            return 0
+        val allFiles = if (deleteMode) {
+            dirFile.getAllFiles()
+        } else {
+            val srcDirectories = dirFile.listFiles(FileFilter { it.name == "src" }).orEmpty()
+            if (srcDirectories.isEmpty()) {
+                logs += "Error: please run on the root directory of a module (i.e. one that contains the 'src' directory)."
+                return 0
+            }
+            srcDirectories.single().getAllFiles()
         }
-        val allFiles = srcDirectories.single().getAllFiles()
         logs += "${allFiles.size} total files to process."
         coroutineScope {
             if (deleteMode) {
