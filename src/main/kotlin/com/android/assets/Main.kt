@@ -5,15 +5,15 @@ import kotlin.system.measureTimeMillis
 fun main(args: Array<String>) {
     val argList = args.toMutableList()
     var dryRun = false
+    var deleteMode = false
     var mapping = ""
-    var outputFile = ""
     val directories = mutableSetOf<String>()
 
     while (argList.isNotEmpty()) {
         when (val arg = argList.removeAt(0)) {
             "--dry-run" -> dryRun = true
+            "--delete" -> deleteMode = true
             "--mapping" -> mapping = argList.removeAt(0)
-            "--output" -> outputFile = argList.removeAt(0)
             "--include" -> directories += argList.removeAt(0)
             else -> {
                 println("Unexpected argument: $arg")
@@ -36,10 +36,10 @@ fun main(args: Array<String>) {
 
     println("""
         ===== Asset Migration =====
-        Dry run : $dryRun
-        Mapping : $mapping
-        Output  : ${if (outputFile.isNotBlank()) "file -> $outputFile" else "console"}
-        ${directories.joinToString(prefix = "Include : ", separator = "\n        Include : ")}
+        Dry run     : $dryRun
+        Delete mode : $deleteMode
+        Mapping     : $mapping
+        ${directories.joinToString(prefix = "Include     : ", separator = "\n        Include     : ")}
         
     """.trimIndent())
 
@@ -56,7 +56,8 @@ fun main(args: Array<String>) {
 
     var totalFiles = 0
     val duration = measureTimeMillis {
-        totalFiles = AssetMigrator(dryRun, assetMapping).run(directories)
+        totalFiles = AssetMigrator(dryRun = dryRun, deleteMode = deleteMode, mapping = assetMapping)
+                .run(directories)
     }
     println("Done! Processed a total of $totalFiles files in $duration ms.")
 }
@@ -66,7 +67,7 @@ private fun printUsage() {
         Available arguments (order doesn't matter):
         --mapping [file]      : CSV file to read mappings from. Required.
         --include [directory] : Include a directory in the migration. Can provide multiple times. Must provide at least one.
+        --delete              : Delete old assets instead of replacing usages. 
         --dry-run             : Perform a dry run; don't actually modify any files.
-        --output [file]       : Log to a file. Optional; logs to console if omitted.
     """.trimIndent())
 }

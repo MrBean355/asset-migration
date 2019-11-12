@@ -10,8 +10,7 @@ import java.util.Date
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
 
-class AssetMigrator(private val dryRun: Boolean, private val mapping: AssetMapping) {
-    private val count = AtomicInteger(0)
+class AssetMigrator(private val dryRun: Boolean, private val deleteMode: Boolean, private val mapping: AssetMapping) {
 
     /**
      * Replace usages of old assets with new ones.
@@ -31,32 +30,42 @@ class AssetMigrator(private val dryRun: Boolean, private val mapping: AssetMappi
     private suspend fun runSingle(directory: String): Int {
         println("Processing directory: $directory...")
         val dirFile = File(directory)
-        val logFile = getLogFile(dirFile.name)
-        logFile.appendLine("${Date()}\nProcessing ${dirFile.absolutePath}...")
+        val logs = ConcurrentLinkedQueue<String>()
+        logs += "${Date()}\nProcessing ${dirFile.absolutePath}..."
         if (!dirFile.exists() || !dirFile.isDirectory) {
-            logFile.appendLine("Error: target doesn't exist or is not a directory.")
+            logs += "Error: target doesn't exist or is not a directory."
             return 0
         }
         val srcDirectories = dirFile.listFiles(FileFilter { it.name == "src" }).orEmpty()
         if (srcDirectories.isEmpty()) {
-            logFile.appendLine("Error: please run on the root directory of a module (i.e. one that contains the 'src' directory).")
+            logs += "Error: please run on the root directory of a module (i.e. one that contains the 'src' directory)."
             return 0
         }
         val allFiles = srcDirectories.single().getAllFiles()
-        logFile.appendLine("${allFiles.size} total files to process.")
-        val logs = ConcurrentLinkedQueue<String>()
+        logs += "${allFiles.size} total files to process."
         coroutineScope {
-            allFiles.forEach {
-                launch { logs += makeChanges(it) }
+            if (deleteMode) {
+                allFiles.filter { it.nameWithoutExtension in mapping.mappings.keys }.forEach {
+                    logs += "Deleting old asset: ${it.name}"
+                    if (!dryRun) {
+                        it.delete()
+                    }
+                }
+            } else {
+                allFiles.forEach {
+                    launch { logs += makeChanges(it) }
+                }
             }
         }
-        logFile.appendLine(logs.joinToString(separator = "\n"))
-        logFile.appendLine("\nDone!")
+        getLogFile(dirFile.name).apply {
+            appendLine(logs.joinToString(separator = "\n"))
+            appendLine("\nDone!")
+        }
         return allFiles.size
     }
 
     private fun getLogFile(directory: String): File {
-        val logFile = File("${directory.substringAfterLast(File.separatorChar)}-${count.getAndIncrement()}-log.txt")
+        val logFile = File("${directory.substringAfterLast(File.separatorChar)}-log.txt")
         if (logFile.exists()) {
             logFile.delete()
         }
